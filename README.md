@@ -1,124 +1,111 @@
-# Дневник Питания - Full Stack Application
+# Дневник Питания
 
-Полноценное веб-приложение для учета питания с расчетом КБЖУ, статистикой и рекомендациями.
+Веб-приложение для учёта потребляемых продуктов, расчёта калорийности и макронутриентов (БЖУ) с персонализированными рекомендациями.
 
-## 🏗 Архитектура
+## Что умеет приложение
 
+- Регистрация и авторизация пользователей (JWT).
+- Ведение дневника питания с разбивкой по приёмам пищи (завтрак, обед, ужин, перекус).
+- Добавление, редактирование и удаление записей о продуктах/блюдах с указанием КБЖУ и порции.
+- Автоматический расчёт индивидуальных суточных норм калорий, белков, жиров и углеводов (формула Миффлина-Сан-Жеора).
+- Статистика за день, неделю и месяц: суммарное потребление, средние значения, процент выполнения от нормы.
+- Визуализация прогресса с помощью цветных индикаторов и прогресс-баров.
+- Просмотр рекомендуемых норм КБЖУ, пересчитанных при изменении профиля.
+- Адаптивный интерфейс, работающий на настольных и мобильных устройствах.
+
+## Технологии
+
+| Слой | Стек |
+|------|------|
+| Backend | Python 3.12, Django, Django REST Framework, djangorestframework-simplejwt, python-dateutil, psycopg2-binary |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, lucide-react |
+| Database | SQLite (разработка) / PostgreSQL 16 (продакшен) |
+| Infra | Docker, Docker Compose, Nginx |
+
+## Архитектура сервисов
+
+Проект состоит из двух основных частей:
+
+- `nutrition_backend/` — Django‑приложение, предоставляющее REST API и обслуживающее статику админки.
+- `app/` — React‑приложение (SPA), собираемое с помощью Vite.
+
+В Docker-режиме поднимаются следующие сервисы:
+
+- `backend` — Django-сервер (через Gunicorn).
+- `frontend` — Nginx, раздающий собранную статику React.
+- (опционально) `db` — PostgreSQL (если используется вместо SQLite).
+
+Порты по умолчанию:
+
+- Приложение (Docker): `http://localhost`.
+- Backend (локально без Docker): `http://127.0.0.1:8000`.
+- Frontend dev server (локально без Docker): `http://localhost:5173`.
+- PostgreSQL в Docker: `localhost:5432`.
+
+## Переменные окружения
+
+Файл шаблона: `.env.example` (в корне проекта и в `app/.env.example`).
+
+### Backend (`.env` в `nutrition_backend/`)
+
+| Переменная | Обязательна | По умолчанию | Описание |
+|------------|-------------|--------------|-----------|
+| `SECRET_KEY` | да | `django-insecure-...` | Секретный ключ Django |
+| `DEBUG` | нет | `True` | Режим отладки (для продакшена установить `False`) |
+| `DB_ENGINE` | нет | `django.db.backends.sqlite3` | Движок БД (`postgresql` для продакшена) |
+| `DB_NAME` | для PostgreSQL | `nutrition_db` | Имя базы данных |
+| `DB_USER` | для PostgreSQL | `nutrition_user` | Пользователь БД |
+| `DB_PASSWORD` | для PostgreSQL | - | Пароль пользователя |
+| `DB_HOST` | для PostgreSQL | `localhost` | Хост БД |
+| `DB_PORT` | для PostgreSQL | `5432` | Порт БД |
+| `CORS_ALLOWED_ORIGINS` | нет | `http://localhost:5173,http://127.0.0.1:5173` | Разрешённые источники для CORS |
+
+### Frontend (`.env` в `app/`)
+
+| Переменная | Обязательна | По умолчанию | Описание |
+|------------|-------------|--------------|-----------|
+| `VITE_API_URL` | да | `http://127.0.0.1:8000/api` | Базовый URL для запросов к API |
+
+## Деплой в Docker (рекомендуется)
+
+```bash
+cp .env.example .env
+# отредактируйте .env (укажите SECRET_KEY, отключите DEBUG и т.д.)
+docker compose up --build
 ```
-/mnt/okcomputer/output/
-├── app/                    # React Frontend
-│   ├── src/
-│   │   ├── components/    # React компоненты
-│   │   ├── hooks/         # Хуки (useAuthApi, useFoodApi)
-│   │   ├── services/      # API сервисы
-│   │   └── App.tsx        # Главный компонент
-│   ├── dist/              # Сборка для production
-│   └── .env.example       # Пример переменных окружения
-│
-└── nutrition_backend/      # Django Backend
-    ├── nutrition_backend/  # Настройки Django
-    ├── api/               # Приложение API
-    │   ├── models.py      # Модели User, FoodItem
-    │   ├── serializers.py # Сериализаторы DRF
-    │   ├── views.py       # API views
-    │   └── urls.py        # URL маршруты
-    ├── manage.py
-    ├── requirements.txt
-    └── README.md
-```
+После запуска приложение будет доступно по адресу http://localhost.
 
-## 🚀 Быстрый старт
-
-### 1. Запуск Django Backend
+Локально без Docker
+1. Запуск бэкенда
 
 ```bash
 cd nutrition_backend
-
-# Создать виртуальное окружение
 python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-
-# Установить зависимости
+venv\Scripts\activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Применить миграции
 python manage.py migrate
-
-# Создать суперпользователя
-python manage.py createsuperuser
-
-# Запустить сервер
+python manage.py createsuperuser  # опционально
 python manage.py runserver
 ```
-
-API будет доступно по адресу: `http://127.0.0.1:8000`
-
-### 2. Запуск React Frontend
-
+Запуск фронтенда (в другом терминале)
 ```bash
 cd app
-
-# Установить зависимости
 npm install
-
-# Создать .env файл
 echo "VITE_API_URL=http://127.0.0.1:8000/api" > .env
-
-# Запустить dev сервер
 npm run dev
 ```
+Откройте http://localhost:5173.
 
-Frontend будет доступен по адресу: `http://localhost:5173`
-
-## 📡 API Endpoints
-
-### Аутентификация (JWT)
-
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| POST | `/api/token/` | Получить JWT токен |
-| POST | `/api/token/refresh/` | Обновить JWT токен |
-
-### Пользователи
-
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| POST | `/api/auth/register/` | Регистрация |
-| GET | `/api/auth/profile/` | Профиль пользователя |
-| PATCH | `/api/auth/profile/update/` | Обновить профиль |
-
-### Записи о пище
-
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/api/food/?date=2024-01-01` | Список записей |
-| POST | `/api/food/` | Создать запись |
-| GET | `/api/food/<id>/` | Получить запись |
-| PATCH | `/api/food/<id>/` | Обновить запись |
-| DELETE | `/api/food/<id>/` | Удалить запись |
-
-### Статистика
-
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/api/stats/daily/?date=2024-01-01` | Статистика за день |
-| GET | `/api/stats/period/?period=week` | Статистика за период |
-| GET | `/api/stats/goals/` | Рекомендуемые нормы КБЖУ |
-
-## 📋 Примеры запросов
-
-### Регистрация
-
+Примеры API-запросов
+Регистрация
 ```bash
 curl -X POST http://127.0.0.1:8000/api/auth/register/ \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
-    "password": "password123",
-    "password_confirm": "password123",
-    "name": "Иван Иванов",
+    "name": "Иван",
+    "password": "pass123",
+    "password_confirm": "pass123",
     "gender": "male",
     "age": 30,
     "height": 180,
@@ -127,194 +114,68 @@ curl -X POST http://127.0.0.1:8000/api/auth/register/ \
     "goal": "maintain"
   }'
 ```
-
-### Вход
-
+Вход
 ```bash
 curl -X POST http://127.0.0.1:8000/api/token/ \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
+  -d '{"email": "user@example.com", "password": "pass123"}'
 ```
-
-### Добавление записи
-
+Добавление продукта (требуется токен)
 ```bash
 curl -X POST http://127.0.0.1:8000/api/food/ \
+  -H "Authorization: Bearer <your_access_token>" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your_token>" \
   -d '{
-    "name": "Овсянка с ягодами",
+    "name": "Овсянка",
     "calories": 350,
     "protein": 12,
     "fat": 6,
     "carbs": 58,
     "portion": 100,
-    "date": "2024-01-15",
+    "date": "2025-04-23",
     "meal_type": "breakfast"
   }'
 ```
+Тестирование
+Бэкенд: cd nutrition_backend && pytest --cov=api
 
-## 🔧 Настройка для Production
+Фронтенд: cd app && npm run test
 
-### Django
-
-1. **Измените SECRET_KEY** в `settings.py`:
-```python
-SECRET_KEY = os.environ.get('SECRET_KEY')
+Структура проекта (основное)
 ```
-
-2. **Отключите DEBUG**:
-```python
-DEBUG = False
-```
-
-3. **Настройте CORS**:
-```python
-CORS_ALLOWED_ORIGINS = [
-    "https://your-frontend-domain.com",
-]
-```
-
-4. **Используйте PostgreSQL**:
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-    }
-}
-```
-
-### React
-
-1. **Создайте production сборку**:
-```bash
-npm run build
-```
-
-2. **Настройте API URL**:
-```bash
-# .env.production
-VITE_API_URL=https://your-api-domain.com/api
-```
-
-## 📁 Структура проекта (подробно)
-
-### Backend (Django)
-
-```
-nutrition_backend/
-├── nutrition_backend/          # Основной модуль Django
-│   ├── __init__.py
-│   ├── settings.py            # Настройки проекта
-│   ├── urls.py                # Главные URL
-│   ├── wsgi.py                # WSGI конфигурация
-│   └── asgi.py                # ASGI конфигурация
+myApp/
+├── app/                           # React Frontend
+│   ├── src/
+│   │   ├── components/            # UI-компоненты
+│   │   ├── hooks/                 # Кастомные хуки
+│   │   ├── services/              # API-сервис
+│   │   ├── App.tsx                # Главный компонент
+│   │   └── main.tsx               # Точка входа
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── .env.example
 │
-├── api/                        # Приложение API
-│   ├── migrations/            # Миграции БД
-│   ├── __init__.py
-│   ├── admin.py               # Настройки админки
-│   ├── apps.py                # Конфигурация приложения
-│   ├── managers.py            # Кастомный UserManager
-│   ├── models.py              # Модели User, FoodItem
-│   ├── serializers.py         # DRF сериализаторы
-│   ├── urls.py                # URL API
-│   └── views.py               # API представления
+├── nutrition_backend/             # Django Backend
+│   ├── api/                       # Основное приложение
+│   │   ├── migrations/            # Миграции БД
+│   │   ├── models.py              # Модели User, FoodItem
+│   │   ├── serializers.py         # DRF сериализаторы
+│   │   ├── views.py               # API представления
+│   │   ├── urls.py                # Маршруты API
+│   │   └── tests/                 # Тесты (pytest)
+│   ├── nutrition_backend/         # Настройки Django
+│   │   ├── settings.py
+│   │   └── urls.py
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── db.sqlite3
+│   └── .env.example
 │
-├── manage.py                   # Управление Django
-├── requirements.txt            # Зависимости Python
-├── .env.example               # Пример переменных окружения
-├── .gitignore
-└── README.md                   # Документация бэкенда
+├── docker/                        # Конфигурация Docker
+│   └── nginx/
+│       └── default.conf
+├── Dockerfile.backend
+├── Dockerfile.frontend
+├── docker-compose.yml
+└── README.md
 ```
-
-### Frontend (React)
-
-```
-app/
-├── src/
-│   ├── components/
-│   │   ├── auth/
-│   │   │   └── AuthForms.tsx       # Формы входа/регистрации
-│   │   ├── food/
-│   │   │   ├── AddFoodForm.tsx     # Форма добавления еды
-│   │   │   └── FoodList.tsx        # Список записей
-│   │   ├── stats/
-│   │   │   ├── DailyStats.tsx      # Статистика за день
-│   │   │   ├── PeriodStats.tsx     # Статистика за период
-│   │   │   └── NutritionGoals.tsx  # Рекомендуемые нормы
-│   │   ├── Header.tsx              # Шапка приложения
-│   │   └── DateSelector.tsx        # Выбор даты
-│   │
-│   ├── hooks/
-│   │   ├── useAuthApi.tsx          # Хук авторизации
-│   │   └── useFoodApi.ts           # Хук для работы с едой
-│   │
-│   ├── services/
-│   │   └── api.ts                  # API сервисы
-│   │
-│   ├── App.tsx                     # Главный компонент
-│   └── main.tsx                    # Точка входа
-│
-├── dist/                           # Сборка production
-├── index.html
-├── package.json
-├── vite.config.ts
-├── tailwind.config.js
-├── tsconfig.json
-└── .env.example                    # Пример переменных окружения
-```
-
-## 🛠 Технологии
-
-### Backend
-- **Django 4.2+** - веб-фреймворк
-- **Django REST Framework** - API
-- **djangorestframework-simplejwt** - JWT аутентификация
-- **django-cors-headers** - CORS
-- **SQLite** (dev) / **PostgreSQL** (production)
-
-### Frontend
-- **React 18+** - UI библиотека
-- **TypeScript** - типизация
-- **Vite** - сборщик
-- **Tailwind CSS** - стили
-- **shadcn/ui** - компоненты UI
-
-## 📊 Функционал
-
-### ✅ Реализовано
-
-1. **Авторизация и регистрация**
-   - JWT токены
-   - Регистрация с персональными данными
-   - Профиль пользователя
-
-2. **Учет питания**
-   - Добавление продуктов/блюд
-   - КБЖУ для каждой записи
-   - Категории приемов пищи
-   - История по дням
-
-3. **Статистика**
-   - Дневная статистика
-   - Статистика за неделю/месяц
-   - Сравнение с нормами
-   - Прогресс-бары
-
-4. **Рекомендации**
-   - Расчет норм КБЖУ
-   - Формула Миффлина-Сан Жеора
-   - Персонализированные советы
-
-## 📝 Лицензия
-
-MIT License
